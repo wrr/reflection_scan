@@ -46,7 +46,7 @@ class EndPointAddress:
         self.port = 0
 
 class Query:
-    """Parameters that vary between different queries.
+    """Holds parameters that vary between different queries.
 
     The parameters are passed to the 'send_query' executable.
 
@@ -285,7 +285,8 @@ def scan(scan_mode, sequential_sweep, ping_command,
     """Executes a scan.
 
     Args:
-        scan_mode: Enum that indicates which TCP secret field is scanned.
+        scan_mode: Enum that indicates which TCP secret field is
+            searched for.
         sequential_sweep: If set, each query is executed only once, results are
             printed without determining which value is correct.
         ping_command: A list of arguments to a ping process.
@@ -333,8 +334,8 @@ def build_query_list(scan_mode, range_start, range_end, range_step,
     """Builds a list of all queries to be executed during scanning.
 
     Args:
-        scan_mode: An Enum that indicates which field queries are scanning
-            (port, sequence or acknowledge number).
+        scan_mode: Enum that indicates which TCP secret field is
+            searched for (port, sequence or acknowledge number).
         range_start: An integer value that denotes start of a range
             that queries need to cover (the start value is also covered).
         range_end: An integer value that denotes end of a range that
@@ -367,9 +368,9 @@ def build_ping_command(ping_destination, pings_per_query):
 
     For each executed query, the command is the same. Number of ping
     probes can be adjusted, other arguments are fixed. See 'man ping'
-    for arguments documentation. The arguments below worked well in an
-    experimental setup, if they are modified, attention needs to be
-    given to few things:
+    for arguments documentation. The arguments below worked well in
+    the experimental setup, if they are modified, attention needs to
+    be given to few things:
 
        '-s' needs to be large enough for ping to properly identify
        responses otherwise ping won't report average RTT (in the

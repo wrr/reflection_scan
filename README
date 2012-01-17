@@ -1,7 +1,7 @@
 This proof of concept was used to obtain experimental results
 presented in the 'Reflection Scan: an Off-Path Attack on TCP'. The
 code is provided to allow reproduction of the experimental results and
-to provide a starting point for further experiments in different
+to be a starting point for further experiments in different
 setups. The proof of concept is not intended to be fully automatic
 'fire and forget' TCP session hijacking tool. Some steps, that from
 the attack perspective do not introduce any fundamental difficulties,
@@ -22,7 +22,7 @@ sent. Ping probes must share at least one routing queue with segments
 reflected by Alice. Preferably, the pinged machine should be as close to
 the attacker as possible to reduce duration of the attack (in the
 paper, C was a router one hop beyond an edge router connecting Alice
-and the Attacker to the Internet).
+and the attacker to the Internet).
 
 ================================================================================
 Setup
@@ -33,12 +33,12 @@ The tool requires root privileges (to send spoofed IP packets and
 frequent ping probes).
 
 ================================================================================
-Finding an ephemeral port number (Windows XP, Linux with Netfilter)
+Finding an ephemeral port number (Linux with Netfilter and Windows XP).
 
 The most important thing is to determine if, in a given setup, the
-attacker can detect traffic spikes caused by the reflection of a
-sequence of spoofed segments. The easiest way to do it, is to perform
-a port scan of a small range that contains an ephemeral port in use:
+attacker can detect traffic spikes caused by the reflection of a sequence
+of spoofed segments. The easiest way to do it, is to perform a port
+scan of a small range that contains an ephemeral port in use:
 
 ./reflection_scan.py --alice_host=$A --bob_host=$B --bob_port=5455 \
           --ping_destination=$C --scan_mode='port' --range_start=11230 \
@@ -69,7 +69,7 @@ values, especially pings_per_query, should be kept as small as
 possible to reduce the attack duration). If this does not help, the
 sniffer should be used to determine that the victim indeed receives
 spoofed segments and responds to them only if a correct ephemeral port
-is set.
+is scanned.
 
 Once the result for a single port is visible, the user can determine
 how many ports per query can be probed to still generate a visible
@@ -96,7 +96,7 @@ From the performance perspective it does not make sense to scan more than
 250 ports per query.
 
 Knowing the parameters that induce a visible spike, the user can try
-to automatically find an ephemeral port in the full range of 2^16 ports:
+to automatically find an ephemeral port in the full space of 2^16 ports:
 ./reflection_scan.py --alice_host=$A --bob_host=$B --bob_port=5455 \
           --ping_destination=$C --scan_mode='port' --segment_cnt=30 \
           --pings_per_query=3 --steps_per_query=200
@@ -107,7 +107,7 @@ left. When a range of ports is found, the tool searches for a correct
 port within the range. At the end, the port is printed to stdout.
 
 ================================================================================
-Finding in window sequence number of the victim (Linux with Netfilter).
+Finding the Alice's sequence number (Linux with Netfilter).
 
 It is recommended to first experiment to check that acknowledge number
 that lies within 'largest sender window seen' is indeed accepted and
@@ -121,9 +121,9 @@ by 66000 (--range_step parameter).
           --range_end=1001000000 --range_step=66000 --sequential_sweep
 
 --range_step is for sure not smaller than 66000 (see the paper) and
-can be increased if a window used by the victim's peer is larger. As
-in case of an ephemeral port searching, an acceptable value should
-induce a RTT spike.
+can be increased if a window used by Bob is larger. As in case of an
+ephemeral port searching, an acceptable value should induce a RTT
+spike.
 
 The paper describes how Netfilter can be fooled to increase the value
 of 'maximum sender window seen'. To do it, execute:
@@ -133,12 +133,12 @@ of 'maximum sender window seen'. To do it, execute:
           --segment_cnt=1 --pings_per_query=1 --range_step=66000 \
           --steps_per_query=1000000 --sequential_sweep
 
-Ignore results, the command is not really trying to find anything. The
-command covers the whole space of 2^32 acknowledge numbers with values
-that differ by 66000. Spoofed segments have window size set to 0xFFFF,
-one of the segments should be accepted by Netfilter and should
-increase 'maximum sender window seen' to the maximum value allowed by
-the scalling factor in use.
+Ignore results, the command is not intended to find anything. It
+covers the whole space of 2^32 acknowledge numbers with values that
+differ by 66000. Spoofed segments have window size set to 0xFFFF, one
+of the segments should be accepted by Netfilter and should increase
+'maximum sender window seen' to the maximum value allowed by the
+scalling factor in use.
 
 Once the window is increased, scanning the full space should be very fast:
 
@@ -154,8 +154,8 @@ divided between an initial range scan and a subsequent sequential
 scan).
 
 ================================================================================
-Finding in-window sequence number of the victim's peer (Windows XP or
-other system that closely follows RFC 793 processing rules).
+Finding Bob's sequence number (Windows XP or other system that closely
+follows RFC 793 processing rules).
 
 Again, it is recommended to first scan a limited range of sequence
 numbers that overlaps a window to make sure the changes in RTT are
@@ -181,7 +181,7 @@ differ by 2^31 are probed.
 1000262140(       123) 4  0.000  33.023
 1000262140(2147483770) 4  0.000  21.489
 
---range_step should preferably be equal to the victim's window size
+--range_step should preferably be equal to the Alice's window size
 (it can be smaller, but should not be larger). When in window sequence
 number with an acceptable acknowledge number is probed the smallest
 average RTT and loss ratio should be measured. If the minimum is not
