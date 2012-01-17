@@ -213,7 +213,7 @@ def find_reflected(ping_command, send_query_command_common, query_list):
     if len(query_list_new) == 1:
         return query_list_new[0]
 
-    print "Retrying remaining queries in different order:"
+    print "Retrying remaining queries in random order:"
     random.shuffle(query_list_new)
     return find_reflected(ping_command, send_query_command_common,
                           query_list_new)
@@ -275,7 +275,7 @@ def find_not_reflected(ping_command, send_query_command_common, query_list):
     if len(query_list_new) == 1:
         return query_list_new[0]
 
-    print "Retrying remaining queries in different order:"
+    print "Retrying remaining queries in random order:"
     random.shuffle(query_list_new)
     return find_not_reflected(ping_command, send_query_command_common,
                               query_list_new)
