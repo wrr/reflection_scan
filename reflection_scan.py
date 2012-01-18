@@ -38,7 +38,7 @@ class EndPointAddress:
 
     Attributes:
       ip_address: A string in dotted-decimal notation.
-      point: An integer, 0 if port is unknown.
+      port: An integer, 0 if port is unknown.
     """
 
     def __init__(self):
