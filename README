@@ -42,7 +42,7 @@ scan of a small range that contains an ephemeral port in use:
 
 ./reflection_scan.py --alice_host=$A --bob_host=$B --bob_port=5455 \
           --ping_destination=$C --scan_mode='port' --range_start=11230 \
-          --range_end=11240 --segment_cnt=30 --pings_per_query=3 \
+          --range_end=11240 --segment_cnt=30 --pings_per_query=5 \
           --sequential_sweep
 
 The command sends 30 spoofed segments to each port in a range [11230,
@@ -76,7 +76,7 @@ how many ports per query can be probed to still generate a visible
 spike:
 ./reflection_scan.py --alice_host=$A --bob_host=$B --bob_port=5455 \
           --ping_destination=$C --scan_mode='port' --range_start=10200 \
-          --range_end=12200 --segment_cnt=30 --pings_per_query=3 \
+          --range_end=12200 --segment_cnt=30 --pings_per_query=5 \
           --steps_per_query=200 --sequential_sweep
 
 The command scans 200 ports per query, a spike is still visible:
@@ -99,7 +99,7 @@ Knowing the parameters that induce a visible spike, the user can try
 to automatically find an ephemeral port in the full space of 2^16 ports:
 ./reflection_scan.py --alice_host=$A --bob_host=$B --bob_port=5455 \
           --ping_destination=$C --scan_mode='port' --segment_cnt=30 \
-          --pings_per_query=3 --steps_per_query=200
+          --pings_per_query=5 --steps_per_query=200
 
 'sequential_sweep' mode is off: the tool repeatedly re-executes
 queries for which RTT spike was measured until a single query is
@@ -117,7 +117,7 @@ by 66000 (--range_step parameter).
 
 ./reflection_scan.py --alice_host=$A  --alice_port=11235 --bob_host=$B \
           --bob_port=5455 --ping_destination=$C --scan_mode='ack' \
-          --segment_cnt=30  --pings_per_query=3  --range_start=1000000000 \
+          --segment_cnt=30  --pings_per_query=5  --range_start=1000000000 \
           --range_end=1001000000 --range_step=66000 --sequential_sweep
 
 --range_step is for sure not smaller than 66000 (see the paper) and
@@ -144,7 +144,7 @@ Once the window is increased, scanning the full space should be very fast:
 
 ./reflection_scan.py --alice_host=$A --alice_port=11235 --bob_host=$B \
           --bob_port=5455 --ping_destination=$C --scan_mode='ack' \
-          --segment_cnt=30 --pings_per_query=3 --steps_per_query=20 \
+          --segment_cnt=30 --pings_per_query=5 --steps_per_query=20 \
           --range_step=8388480
 
 --range_step is set to the maximum window allowed by the Bob's window
@@ -166,7 +166,7 @@ differ by 2^31 are probed.
 
 ./reflection_scan.py --alice_host=$A  --alice_port=11235 --bob_host=$B \
           --bob_port=5455 --ping_destination=$C --scan_mode='sqn' \
-          --segment_cnt=30  --pings_per_query=3 --range_start=1000000000 \
+          --segment_cnt=30  --pings_per_query=5 --range_start=1000000000 \
           --range_end=1000300000 --range_step=65535 --sequential_sweep
 
 [scanned sequence number(ack), lost pings, standard deviation, average RTT]
@@ -191,7 +191,7 @@ To scan the whole space of 2^32 sequence numbers use:
 
 ./reflection_scan.py --alice_host=$A  --alice_port=11235 --bob_host=$B \
           --bob_port=5455 --ping_destination=$C --scan_mode='sqn' \
-          --segment_cnt=30  --pings_per_query=3 --range_step=65535
+          --segment_cnt=30  --pings_per_query=5 --range_step=65535
 
 As explained in the paper, this scan is slow and less reliable than
 the scan that looks for a spike. Scanning several values at once
