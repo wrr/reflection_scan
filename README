@@ -46,7 +46,7 @@ scan of a small range that contains an ephemeral port in use:
           --sequential_sweep
 
 The command sends 30 spoofed segments to each port in a range [11230,
-11240). For each probed port 3 pings are sent to C. In the
+11240). For each probed port 5 pings are sent to C. In the
 'sequential_sweep' mode the tool does not try to determine a correct
 ephemeral port, but just prints ping results in a following form:
 
